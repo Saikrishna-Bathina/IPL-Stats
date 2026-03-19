@@ -2,7 +2,7 @@
 
 A comprehensive, interactive analytics dashboard for Indian Premier League (IPL) data, built with **Python**, **Streamlit**, **Pandas**, and **Plotly**. This dashboard provides deep insights into match performances, player stats, and historical trends from the inception of IPL through the 2025 season.
 
-🚀 **Live Demo:** [Deploy your app to see the link here]
+🚀 **Live Demo:** https://ipl-statistics.streamlit.app
 
 ## 📊 Features
 
