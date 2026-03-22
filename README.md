@@ -1,4 +1,18 @@
-# 🏏 IPL Advanced Analytics Dashboard (2008-2025)
+# IPL Stats Dashboard
+
+To process the data (switch between Kaggle CSV and Original JSON datasets), use the following command in PowerShell:
+
+```powershell
+& "C:\Users\Sai Krishna\AppData\Local\Programs\Python\Python311\python.exe" process_data.py
+```
+
+To run the dashboard:
+```powershell
+& "C:\Users\Sai Krishna\AppData\Local\Programs\Python\Python311\python.exe" -m streamlit run Home.py
+```
+
+---
+ (2008-2025)
 
 A comprehensive, interactive analytics dashboard for Indian Premier League (IPL) data, built with **Python**, **Streamlit**, **Pandas**, and **Plotly**. This dashboard provides deep insights into match performances, player stats, and historical trends from the inception of IPL through the 2025 season.
 

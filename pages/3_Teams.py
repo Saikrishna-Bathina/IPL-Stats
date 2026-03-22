@@ -53,7 +53,7 @@ def get_team_milestones(df, target):
     df = df.sort_values(by=['match_id', 'inning', 'over', 'ball'])
     
     df['innings_runs'] = df.groupby(['match_id', 'inning', 'batting_team'])['total_runs'].cumsum()
-    df['innings_balls'] = df.groupby(['match_id', 'inning', 'batting_team'])['is_legal_ball'].cumsum()
+    df['innings_balls'] = df.groupby(['match_id', 'inning', 'batting_team'])['is_bowler_ball'].cumsum()
     df['overs_completed'] = df['innings_balls'] / 6.0
     
     reached = df[df['innings_runs'] >= target].groupby(['match_id', 'inning', 'batting_team']).first().reset_index()
@@ -70,10 +70,10 @@ else:
         st.subheader(f"Fastest to {milestone} Runs (By Balls)")
         fast_teams = ms_df.sort_values(by='innings_balls').head(15).set_index('batting_team')
         fast_teams['overs_completed'] = fast_teams['overs_completed'].round(1)
-        st.dataframe(fast_teams[['bowling_team', 'innings_balls', 'overs_completed', 'venue', 'season']], use_container_width=True)
+        st.dataframe(fast_teams[['bowling_team', 'innings_balls', 'overs_completed', 'venue', 'season']], width='stretch')
     with c2:
         st.subheader(f"Slowest to {milestone} Runs (By Balls)")
         slow_teams = ms_df.sort_values(by='innings_balls', ascending=False).head(15).set_index('batting_team')
         slow_teams['overs_completed'] = slow_teams['overs_completed'].round(1)
-        st.dataframe(slow_teams[['bowling_team', 'innings_balls', 'overs_completed', 'venue', 'season']], use_container_width=True)
+        st.dataframe(slow_teams[['bowling_team', 'innings_balls', 'overs_completed', 'venue', 'season']], width='stretch')
 

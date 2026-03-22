@@ -58,7 +58,7 @@ def get_phase_stats(df):
     # Group by match, inning, team, and phase
     phase_stats = df.groupby(['match_id', 'inning', 'batting_team', 'bowling_team', 'venue', 'season', 'phase']).agg(
         total_runs=('total_runs', 'sum'),
-        total_balls=('is_legal_ball', 'sum') # Only legal deliveries
+        total_balls=('is_bowler_ball', 'sum') # Only legal deliveries
     ).reset_index()
     return phase_stats
 
@@ -80,7 +80,7 @@ else:
     with c1:
         st.subheader("Highest Runs in This Phase")
         highest = phase_filtered.sort_values(by='total_runs', ascending=False).head(15).set_index('batting_team')
-        st.dataframe(highest[['bowling_team', 'total_runs', 'total_balls', 'venue', 'season']], use_container_width=True)
+        st.dataframe(highest[['bowling_team', 'total_runs', 'total_balls', 'venue', 'season']], width='stretch')
     with c2:
         st.subheader("Lowest Runs in This Phase")
         # For lowest runs, make sure there are at least some deliveries in that phase (we shouldn't count missing data as lowest)
@@ -93,11 +93,11 @@ else:
             min_balls = 15
             
         lowest = phase_filtered[phase_filtered['total_balls'] >= min_balls].sort_values(by='total_runs', ascending=True).head(15).set_index('batting_team')
-        st.dataframe(lowest[['bowling_team', 'total_runs', 'total_balls', 'venue', 'season']], use_container_width=True)
+        st.dataframe(lowest[['bowling_team', 'total_runs', 'total_balls', 'venue', 'season']], width='stretch')
 
     st.markdown("---")
     st.markdown("### Average Runs per Phase (by Team)")
     avg_df = phase_filtered.groupby('batting_team')['total_runs'].mean().reset_index().sort_values(by='total_runs')
     fig = px.bar(avg_df, x='batting_team', y='total_runs', title=f"Average {selected_phase} Runs by Team", color='total_runs', text_auto='.1f')
-    st.plotly_chart(fig, use_container_width=True)
+    st.plotly_chart(fig, width='stretch')
 

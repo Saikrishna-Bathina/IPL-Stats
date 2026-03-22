@@ -35,7 +35,12 @@ def load_data():
             return 'Death Overs (16-20)'
             
     deliveries_df['phase'] = deliveries_df['over'].apply(determine_phase)
-    # Determine absolute balls for strike rate calculations (excluding wides and noballs)
-    deliveries_df['is_legal_ball'] = ((deliveries_df['is_wide'] == 0) & (deliveries_df['is_noball'] == 0)).astype(int)
+    # Determine absolute balls for strike rate calculations 
+    # Batter's ball: excludes only wides (No-balls ARE balls faced)
+    deliveries_df['is_batter_ball'] = (deliveries_df['is_wide'] == 0).astype(int)
+    # Bowler's ball: excludes both wides and no-balls (Legal deliveries in an over)
+    deliveries_df['is_bowler_ball'] = ((deliveries_df['is_wide'] == 0) & (deliveries_df['is_noball'] == 0)).astype(int)
+    # Keep is_legal_ball for backward compatibility if needed, aliasing to is_bowler_ball
+    deliveries_df['is_legal_ball'] = deliveries_df['is_bowler_ball']
     
     return matches_df, deliveries_df

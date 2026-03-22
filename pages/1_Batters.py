@@ -70,7 +70,7 @@ target_runs = int(milestone_type.replace("s", ""))
 def get_inning_milestones(df, target):
     df = df.sort_values(by=['match_id', 'inning', 'over', 'ball'])
     df['cumulative_runs'] = df.groupby(['match_id', 'inning', 'batter'])['batsman_runs'].cumsum()
-    df['cumulative_balls'] = df.groupby(['match_id', 'inning', 'batter'])['is_legal_ball'].cumsum()
+    df['cumulative_balls'] = df.groupby(['match_id', 'inning', 'batter'])['is_batter_ball'].cumsum()
     
     reached = df[df['cumulative_runs'] >= target].groupby(['match_id', 'inning', 'batter']).first().reset_index()
     return reached[['batter', 'batting_team', 'bowling_team', 'venue', 'season', 'batting_position', 'cumulative_runs', 'cumulative_balls']]
@@ -86,11 +86,11 @@ else:
     with col1:
         st.subheader(f"Fastest {milestone_type} (by balls)")
         fastest = milestone_df.sort_values(by='cumulative_balls').head(15)
-        st.dataframe(fastest[disp_cols], use_container_width=True)
+        st.dataframe(fastest[disp_cols], width='stretch')
     with col2:
         st.subheader(f"Slowest {milestone_type} (by balls)")
         slowest = milestone_df.sort_values(by='cumulative_balls', ascending=False).head(15)
-        st.dataframe(slowest[disp_cols], use_container_width=True)
+        st.dataframe(slowest[disp_cols], width='stretch')
 
 
 # --- 2. Most 6s, 4s for a team and against a team (Using Filters) ---
@@ -107,7 +107,7 @@ def get_filtered_aggregates(df):
         total_runs=('batsman_runs', 'sum'),
         total_4s=('is_four', 'sum'),
         total_6s=('is_six', 'sum'),
-        balls_faced=('is_legal_ball', 'sum')
+        balls_faced=('is_batter_ball', 'sum')
     ).reset_index()
     return agg[agg['total_runs'] > 0]
 
@@ -119,11 +119,11 @@ if agg_df.empty:
 else:
     t1, t2, t3 = st.tabs(["Most Runs", "Most 4s", "Most 6s"])
     with t1:
-        st.dataframe(agg_df.sort_values(by='total_runs', ascending=False).head(20).set_index('batter'), use_container_width=True)
+        st.dataframe(agg_df.sort_values(by='total_runs', ascending=False).head(20).set_index('batter'), width='stretch')
     with t2:
-        st.dataframe(agg_df.sort_values(by='total_4s', ascending=False).head(20).set_index('batter'), use_container_width=True)
+        st.dataframe(agg_df.sort_values(by='total_4s', ascending=False).head(20).set_index('batter'), width='stretch')
     with t3:
-        st.dataframe(agg_df.sort_values(by='total_6s', ascending=False).head(20).set_index('batter'), use_container_width=True)
+        st.dataframe(agg_df.sort_values(by='total_6s', ascending=False).head(20).set_index('batter'), width='stretch')
 
 # --- 3 & 4. Overall Most Runs & Most Runs for Single Franchise ---
 st.markdown("---")
@@ -141,10 +141,10 @@ def get_franchise_runs(df):
 c_all1, c_all2 = st.columns(2)
 with c_all1:
     st.subheader("Most Runs in IPL")
-    st.dataframe(get_all_time_runs(merged_df).head(20).set_index('batter'), use_container_width=True)
+    st.dataframe(get_all_time_runs(merged_df).head(20).set_index('batter'), width='stretch')
 with c_all2:
     st.subheader("Most Runs for a Single Franchise")
-    st.dataframe(get_franchise_runs(merged_df).head(20).set_index(['batting_team', 'batter']), use_container_width=True)
+    st.dataframe(get_franchise_runs(merged_df).head(20).set_index(['batting_team', 'batter']), width='stretch')
 
 
 # --- 5. Career Run Milestones (Fastest to X Runs) ---
@@ -157,7 +157,7 @@ runs_milestone = st.selectbox("Select Career Runs Milestone", [500, 1000, 1500, 
 def get_career_milestones(df, target):
     innings_stats = df.groupby(['match_id', 'batter', 'season']).agg(
         runs=('batsman_runs', 'sum'),
-        balls=('is_legal_ball', 'sum')
+        balls=('is_batter_ball', 'sum')
     ).reset_index()
     
     innings_stats = innings_stats.sort_values(by=['season', 'match_id'])
@@ -179,8 +179,8 @@ else:
     with c1:
         st.subheader(f"Fastest to {runs_milestone} (By Innings)")
         f_innings = career_ms_df.sort_values(by='innings_played').head(10)
-        st.dataframe(f_innings.set_index('batter'), use_container_width=True)
+        st.dataframe(f_innings.set_index('batter'), width='stretch')
     with c2:
         st.subheader(f"Fastest to {runs_milestone} (By Balls)")
         f_balls = career_ms_df.sort_values(by='career_balls').head(10)
-        st.dataframe(f_balls.set_index('batter'), use_container_width=True)
+        st.dataframe(f_balls.set_index('batter'), width='stretch')

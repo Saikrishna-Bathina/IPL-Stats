@@ -60,7 +60,7 @@ def get_fastest_wickets(df, target):
     
     innings_stats = df.groupby(['match_id', 'bowler', 'season']).agg(
         wickets=('is_bowler_wicket', 'sum'),
-        balls=('is_legal_ball', 'sum')
+        balls=('is_bowler_ball', 'sum')
     ).reset_index()
     
     innings_stats = innings_stats.sort_values(by=['season', 'match_id'])
@@ -82,18 +82,18 @@ else:
         c1, c2 = st.columns(2)
         with c1:
             st.subheader(f"Fastest to {wicket_target} Wickets")
-            st.dataframe(wk_df.sort_values(by='innings_played').head(15).set_index('bowler'), use_container_width=True)
+            st.dataframe(wk_df.sort_values(by='innings_played').head(15).set_index('bowler'), width='stretch')
         with c2:
             st.subheader(f"Slowest to {wicket_target} Wickets")
-            st.dataframe(wk_df.sort_values(by='innings_played', ascending=False).head(15).set_index('bowler'), use_container_width=True)
+            st.dataframe(wk_df.sort_values(by='innings_played', ascending=False).head(15).set_index('bowler'), width='stretch')
     with t2:
         c3, c4 = st.columns(2)
         with c3:
             st.subheader(f"Fastest to {wicket_target} Wickets")
-            st.dataframe(wk_df.sort_values(by='career_balls').head(15).set_index('bowler'), use_container_width=True)
+            st.dataframe(wk_df.sort_values(by='career_balls').head(15).set_index('bowler'), width='stretch')
         with c4:
             st.subheader(f"Slowest to {wicket_target} Wickets")
-            st.dataframe(wk_df.sort_values(by='career_balls', ascending=False).head(15).set_index('bowler'), use_container_width=True)
+            st.dataframe(wk_df.sort_values(by='career_balls', ascending=False).head(15).set_index('bowler'), width='stretch')
 
 
 # --- 2. Most Wickets (Current Filters) ---
@@ -108,11 +108,11 @@ def get_filtered_wickets(df):
     
     agg = df.groupby('bowler').agg(
         total_wickets=('is_bowler_wicket', 'sum'),
-        balls_bowled=('is_legal_ball', 'sum')
+        balls_bowled=('is_bowler_ball', 'sum')
     ).reset_index()
     return agg[agg['total_wickets'] > 0].sort_values(by='total_wickets', ascending=False)
 
-st.dataframe(get_filtered_wickets(filtered_df).head(20).set_index('bowler'), use_container_width=True)
+st.dataframe(get_filtered_wickets(filtered_df).head(20).set_index('bowler'), width='stretch')
 
 
 # --- 3. All-Time & Franchise Wicket Records ---
@@ -137,10 +137,10 @@ def most_wickets_for_team(df):
 ca1, ca2 = st.columns(2)
 with ca1:
     st.subheader("Most Wickets in IPL")
-    st.dataframe(most_wickets_overall(merged_df).head(20).set_index('bowler'), use_container_width=True)
+    st.dataframe(most_wickets_overall(merged_df).head(20).set_index('bowler'), width='stretch')
 with ca2:
     st.subheader("Most Wickets for a Single Franchise")
-    st.dataframe(most_wickets_for_team(merged_df).head(20).set_index(['bowling_team', 'bowler']), use_container_width=True)
+    st.dataframe(most_wickets_for_team(merged_df).head(20).set_index(['bowling_team', 'bowler']), width='stretch')
 
 
 # --- 4. Fastest 5-Wicket Hauls ---
@@ -154,7 +154,7 @@ def get_five_wicket_hauls(df):
     df = df.sort_values(by=['match_id', 'inning', 'over', 'ball'])
     
     df['innings_runs_conceded'] = df.groupby(['match_id', 'inning', 'bowler'])['total_runs'].cumsum() - df.groupby(['match_id', 'inning', 'bowler'])['is_legbye'].cumsum() - df.groupby(['match_id', 'inning', 'bowler'])['is_bye'].cumsum()
-    df['innings_balls_bowled'] = df.groupby(['match_id', 'inning', 'bowler'])['is_legal_ball'].cumsum()
+    df['innings_balls_bowled'] = df.groupby(['match_id', 'inning', 'bowler'])['is_bowler_ball'].cumsum()
     df['innings_wickets'] = df.groupby(['match_id', 'inning', 'bowler'])['is_bowler_wicket'].cumsum()
     
     five_wkt = df[df['innings_wickets'] == 5].groupby(['match_id', 'inning', 'bowler']).first().reset_index()
@@ -169,7 +169,7 @@ else:
     c5, c6 = st.columns(2)
     with c5:
         st.subheader("Fastest to 5-Wicket Haul (By Balls)")
-        st.dataframe(fifer_df.sort_values(by='innings_balls_bowled').head(10).set_index('bowler'), use_container_width=True)
+        st.dataframe(fifer_df.sort_values(by='innings_balls_bowled').head(10).set_index('bowler'), width='stretch')
     with c6:
         st.subheader("Most Economical 5-Wicket Haul (By Runs)")
-        st.dataframe(fifer_df.sort_values(by='innings_runs_conceded').head(10).set_index('bowler'), use_container_width=True)
+        st.dataframe(fifer_df.sort_values(by='innings_runs_conceded').head(10).set_index('bowler'), width='stretch')
