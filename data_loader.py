@@ -43,4 +43,10 @@ def load_data():
     # Keep is_legal_ball for backward compatibility if needed, aliasing to is_bowler_ball
     deliveries_df['is_legal_ball'] = deliveries_df['is_bowler_ball']
     
+    # Identify Super Overs (Innings 3 and above)
+    deliveries_df['is_super_over'] = (deliveries_df['inning'] > 2).astype(int)
+    
+    # Ensure date is datetime for accurate sorting
+    matches_df['date'] = pd.to_datetime(matches_df['date'])
+    
     return matches_df, deliveries_df

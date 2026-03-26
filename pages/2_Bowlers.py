@@ -34,6 +34,10 @@ years = sorted([str(y) for y in matches_df['season'].dropna().unique() if str(y)
 year = st.sidebar.selectbox("Year", ["All"] + years)
 
 merged_df = deliveries_df.merge(matches_df[['match_id', 'season', 'venue']], on='match_id', how='left')
+
+# GLOBAL FIX: Exclude Super Overs from all player stats as they don't count towards career records
+merged_df = merged_df[merged_df['is_super_over'] == 0]
+
 filtered_df = merged_df.copy()
 
 if def_team != "All":
@@ -54,25 +58,34 @@ st.caption("Respects sidebar filters (e.g., fastest to 50 wickets for MI against
 wicket_target = st.selectbox("Select Wickets Milestone", [50, 100, 150, 200, 250])
 
 @st.cache_data
-def get_fastest_wickets(df, target):
+def get_fastest_wickets(df, target, matches_df):
+    # Merge with matches for date
+    df = df.merge(matches_df[['match_id', 'date']], on='match_id', how='left')
+    
     non_bowler_wickets = ['run out', 'retired hurt', 'obstructing the field', 'hit ball twice', 'timed out']
     df['is_bowler_wicket'] = ((df['is_wicket'] == 1) & (~df['dismissal_kind'].isin(non_bowler_wickets))).astype(int)
     
-    innings_stats = df.groupby(['match_id', 'bowler', 'season']).agg(
+    innings_stats = df.groupby(['match_id', 'date', 'bowler', 'season']).agg(
         wickets=('is_bowler_wicket', 'sum'),
         balls=('is_bowler_ball', 'sum')
     ).reset_index()
     
-    innings_stats = innings_stats.sort_values(by=['season', 'match_id'])
+    # Use date for true chronological sorting
+    innings_stats = innings_stats.sort_values(by=['date', 'match_id'])
+    
     innings_stats['career_wickets'] = innings_stats.groupby('bowler')['wickets'].cumsum()
     innings_stats['career_balls'] = innings_stats.groupby('bowler')['balls'].cumsum()
     innings_stats['innings_played'] = innings_stats.groupby('bowler').cumcount() + 1
     
     reached = innings_stats[innings_stats['career_wickets'] >= target].groupby('bowler').first().reset_index()
-    return reached[['bowler', 'career_wickets', 'career_balls', 'innings_played']]
+    return reached[['bowler', 'career_wickets', 'career_balls', 'innings_played', 'season']]
 
 with st.spinner("Calculating Wicket Milestones..."):
-    wk_df = get_fastest_wickets(filtered_df, wicket_target)
+    if year != "All":
+        all_milestones = get_fastest_wickets(merged_df, wicket_target, matches_df)
+        wk_df = all_milestones[all_milestones['season'] == year]
+    else:
+        wk_df = get_fastest_wickets(filtered_df.copy(), wicket_target, matches_df)
     
 if wk_df.empty:
     st.info(f"No bowler has reached {wicket_target} wickets with these filters.")
@@ -136,10 +149,10 @@ def most_wickets_for_team(df):
 
 ca1, ca2 = st.columns(2)
 with ca1:
-    st.subheader("Most Wickets in IPL")
+    st.subheader("Most Wickets in IPL (Excl. Super Overs)")
     st.dataframe(most_wickets_overall(merged_df).head(20).set_index('bowler'), width='stretch')
 with ca2:
-    st.subheader("Most Wickets for a Single Franchise")
+    st.subheader("Most Wickets for a Single Franchise (Excl. Super Overs)")
     st.dataframe(most_wickets_for_team(merged_df).head(20).set_index(['bowling_team', 'bowler']), width='stretch')
 
 
@@ -147,13 +160,25 @@ with ca2:
 st.markdown("---")
 st.markdown("## Fastest 5-Wicket Hauls in an Innings")
 @st.cache_data
-def get_five_wicket_hauls(df):
+def get_five_wicket_hauls(df, matches_df):
+    # Merge for date
+    df = df.merge(matches_df[['match_id', 'date']], on='match_id', how='left')
+    
     non_bowler_wickets = ['run out', 'retired hurt', 'obstructing the field', 'hit ball twice', 'timed out']
     df['is_bowler_wicket'] = ((df['is_wicket'] == 1) & (~df['dismissal_kind'].isin(non_bowler_wickets))).astype(int)
     
-    df = df.sort_values(by=['match_id', 'inning', 'over', 'ball'])
+    # Sort chronologically
+    df = df.sort_values(by=['date', 'match_id', 'inning', 'over', 'ball'])
     
-    df['innings_runs_conceded'] = df.groupby(['match_id', 'inning', 'bowler'])['total_runs'].cumsum() - df.groupby(['match_id', 'inning', 'bowler'])['is_legbye'].cumsum() - df.groupby(['match_id', 'inning', 'bowler'])['is_bye'].cumsum()
+    # Accurate runs conceded: subtract legbyes, byes, and penalties
+    # Note: total_runs = batsman_runs + extra_runs. 
+    # Bowler's extras are wides and noballs.
+    # Non-bowler extras are legbyes, byes, penalties.
+    df['innings_runs_conceded'] = df.groupby(['match_id', 'inning', 'bowler'])['total_runs'].cumsum() - \
+                                  df.groupby(['match_id', 'inning', 'bowler'])['is_legbye'].cumsum() - \
+                                  df.groupby(['match_id', 'inning', 'bowler'])['is_bye'].cumsum() - \
+                                  df.groupby(['match_id', 'inning', 'bowler'])['is_penalty'].cumsum()
+                                  
     df['innings_balls_bowled'] = df.groupby(['match_id', 'inning', 'bowler'])['is_bowler_ball'].cumsum()
     df['innings_wickets'] = df.groupby(['match_id', 'inning', 'bowler'])['is_bowler_wicket'].cumsum()
     
@@ -161,7 +186,7 @@ def get_five_wicket_hauls(df):
     return five_wkt[['bowler', 'batting_team', 'venue', 'season', 'innings_balls_bowled', 'innings_runs_conceded']]
 
 with st.spinner("Calculating 5-Wicket Hauls..."):
-    fifer_df = get_five_wicket_hauls(filtered_df)
+    fifer_df = get_five_wicket_hauls(filtered_df, matches_df)
     
 if fifer_df.empty:
     st.info("No 5-wicket hauls found.")

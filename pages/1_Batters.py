@@ -42,6 +42,9 @@ positions_df = get_batting_positions(deliveries_df)
 merged_df = deliveries_df.merge(positions_df, on=['match_id', 'inning', 'batter'], how='left')
 merged_df = merged_df.merge(matches_df[['match_id', 'season', 'venue']], on='match_id', how='left')
 
+# GLOBAL FIX: Exclude Super Overs from all player stats as they don't count towards career records
+merged_df = merged_df[merged_df['is_super_over'] == 0]
+
 positions = sorted([int(p) for p in merged_df['batting_position'].dropna().unique()])
 bat_pos = st.sidebar.selectbox("Batting Position", ["All"] + [str(p) for p in positions])
 
@@ -140,10 +143,10 @@ def get_franchise_runs(df):
 
 c_all1, c_all2 = st.columns(2)
 with c_all1:
-    st.subheader("Most Runs in IPL")
+    st.subheader("Most Runs in IPL (Excl. Super Overs)")
     st.dataframe(get_all_time_runs(merged_df).head(20).set_index('batter'), width='stretch')
 with c_all2:
-    st.subheader("Most Runs for a Single Franchise")
+    st.subheader("Most Runs for a Single Franchise (Excl. Super Overs)")
     st.dataframe(get_franchise_runs(merged_df).head(20).set_index(['batting_team', 'batter']), width='stretch')
 
 
@@ -154,26 +157,43 @@ st.caption("Respects sidebar filters (e.g., fastest to 1000 runs against CSK)")
 runs_milestone = st.selectbox("Select Career Runs Milestone", [500, 1000, 1500, 2000, 2500, 3000, 3500, 4000, 4500, 5000, 5500, 6000])
 
 @st.cache_data
-def get_career_milestones(df, target):
-    innings_stats = df.groupby(['match_id', 'batter', 'season']).agg(
+def get_career_milestones(df, target, matches_df):
+    # Merge with matches to get date for accurate sorting
+    df = df.merge(matches_df[['match_id', 'date']], on='match_id', how='left')
+    
+    innings_stats = df.groupby(['match_id', 'date', 'batter', 'season']).agg(
         runs=('batsman_runs', 'sum'),
         balls=('is_batter_ball', 'sum')
     ).reset_index()
     
-    innings_stats = innings_stats.sort_values(by=['season', 'match_id'])
+    # Use date for true chronological sorting
+    innings_stats = innings_stats.sort_values(by=['date', 'match_id'])
     
     innings_stats['career_runs'] = innings_stats.groupby('batter')['runs'].cumsum()
     innings_stats['career_balls'] = innings_stats.groupby('batter')['balls'].cumsum()
     innings_stats['innings_played'] = innings_stats.groupby('batter').cumcount() + 1
     
     reached = innings_stats[innings_stats['career_runs'] >= target].groupby('batter').first().reset_index()
-    return reached[['batter', 'career_runs', 'career_balls', 'innings_played']]
+    return reached[['batter', 'career_runs', 'career_balls', 'innings_played', 'season']]
 
 with st.spinner("Calculating Career Milestones..."):
-    career_ms_df = get_career_milestones(filtered_df, runs_milestone)
+    # Fix: If we want TRUE career milestones, we should calculate them on the full merged_df (excl. super overs)
+    # and then filter the results if the user has specific team/year filters.
+    # However, to support "Fastest to reach 1000 against team X", we use the filtered_df.
+    # To fix the "Year resets career count" issue, we check if Year filter is applied.
+    
+    milestone_context_df = filtered_df.copy()
+    if year != "All":
+        # If year is filtered, we want to know who reached the milestone IN THAT YEAR
+        # but using their FULL CAREER inning count.
+        # So we calculate milestones on the FULL dataset and then filter the ones reached in 'year'.
+        all_milestones = get_career_milestones(merged_df, runs_milestone, matches_df)
+        career_ms_df = all_milestones[all_milestones['season'] == year]
+    else:
+        career_ms_df = get_career_milestones(milestone_context_df, runs_milestone, matches_df)
     
 if career_ms_df.empty:
-    st.info(f"No batter has reached {runs_milestone} runs with current filters.")
+    st.info(f"No records found for {runs_milestone} runs with current filters.")
 else:
     c1, c2 = st.columns(2)
     with c1:

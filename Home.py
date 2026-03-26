@@ -30,8 +30,10 @@ try:
     
     col1, col2, col3 = st.columns(3)
     col1.metric("Total Matches", len(matches_df))
-    col2.metric("Total Deliveries", len(deliveries_df))
-    col3.metric("Total Runs Scored", int(deliveries_df['total_runs'].sum()))
+    # Filter for standard career deliveries (excl. super overs)
+    career_deliveries = deliveries_df[deliveries_df['is_super_over'] == 0]
+    col2.metric("Total Career Deliveries", len(career_deliveries))
+    col3.metric("Total Career Runs Scored", int(career_deliveries['total_runs'].sum()))
         
 except Exception as e:
     st.error(f"Error loading data: {e}\nPlease process the JSON files first by running `python process_data.py`.")

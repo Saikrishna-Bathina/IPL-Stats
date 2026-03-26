@@ -35,6 +35,9 @@ year = st.sidebar.selectbox("Year", ["All"] + years)
 
 merged_df = deliveries_df.merge(matches_df[['match_id', 'season', 'venue']], on='match_id', how='left')
 
+# GLOBAL FIX: Exclude Super Overs from all player/team stats as they don't count towards career records
+merged_df = merged_df[merged_df['is_super_over'] == 0]
+
 filtered_df = merged_df.copy()
 if def_team != "All":
     filtered_df = filtered_df[filtered_df['batting_team'] == def_team]
