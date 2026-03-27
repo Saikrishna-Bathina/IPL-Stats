@@ -182,8 +182,24 @@ def get_five_wicket_hauls(df, matches_df):
     df['innings_balls_bowled'] = df.groupby(['match_id', 'inning', 'bowler'])['is_bowler_ball'].cumsum()
     df['innings_wickets'] = df.groupby(['match_id', 'inning', 'bowler'])['is_bowler_wicket'].cumsum()
     
-    five_wkt = df[df['innings_wickets'] == 5].groupby(['match_id', 'inning', 'bowler']).first().reset_index()
-    return five_wkt[['bowler', 'batting_team', 'venue', 'season', 'innings_balls_bowled', 'innings_runs_conceded']]
+    # Corrected fifer logic: get total innings summary for anyone who reached 5 wickets
+    # First, identify the bowlers who took 5+ wickets in an innings
+    fifer_matches = df[df['innings_wickets'] >= 5].groupby(['match_id', 'inning', 'bowler']).first().reset_index()
+    
+    # Now get the final summary for those bowler-innings (last delivery of their spell)
+    fifer_summary = df.groupby(['match_id', 'inning', 'bowler']).last().reset_index()
+    
+    # Merge to only include those who reached 5 wickets
+    fifers = fifer_summary.merge(fifer_matches[['match_id', 'inning', 'bowler', 'innings_balls_bowled']], on=['match_id', 'inning', 'bowler'], how='inner', suffixes=('', '_at_5th'))
+    
+    # Renaming for clarity
+    fifers['balls_to_5_wickets'] = fifers['innings_balls_bowled_at_5th']
+    fifers['final_wickets'] = fifers['innings_wickets']
+    fifers['final_runs'] = fifers['innings_runs_conceded']
+    fifers['final_overs'] = (fifers['innings_balls_bowled'] / 6).astype(int).astype(str) + "." + (fifers['innings_balls_bowled'] % 6).astype(str)
+    fifers['figures'] = fifers['final_wickets'].astype(str) + "/" + fifers['final_runs'].astype(str)
+    
+    return fifers[['bowler', 'batting_team', 'venue', 'season', 'balls_to_5_wickets', 'final_wickets', 'final_runs', 'figures', 'final_overs']]
 
 with st.spinner("Calculating 5-Wicket Hauls..."):
     fifer_df = get_five_wicket_hauls(filtered_df, matches_df)
@@ -194,7 +210,10 @@ else:
     c5, c6 = st.columns(2)
     with c5:
         st.subheader("Fastest to 5-Wicket Haul (By Balls)")
-        st.dataframe(fifer_df.sort_values(by='innings_balls_bowled').head(10).set_index('bowler'), width='stretch')
+        fast_bowlers = fifer_df.sort_values(by='balls_to_5_wickets').head(10).set_index('bowler')
+        st.dataframe(fast_bowlers[['batting_team', 'balls_to_5_wickets', 'figures', 'final_overs', 'venue', 'season']], width='stretch')
     with c6:
         st.subheader("Most Economical 5-Wicket Haul (By Runs)")
-        st.dataframe(fifer_df.sort_values(by='innings_runs_conceded').head(10).set_index('bowler'), width='stretch')
+        # Sort by final runs conceded, then by final overs
+        econ_bowlers = fifer_df.sort_values(by=['final_runs', 'final_overs']).head(10).set_index('bowler')
+        st.dataframe(econ_bowlers[['batting_team', 'figures', 'final_overs', 'venue', 'season']], width='stretch')
