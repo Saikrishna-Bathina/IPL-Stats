@@ -12,7 +12,7 @@ st.title("🏏 Match Phase Statistics")
 
 @st.cache_data
 def load_all_data():
-    return load_data()
+    return load_data(v="2.1")
 
 try:
     matches_df, deliveries_df = load_all_data()

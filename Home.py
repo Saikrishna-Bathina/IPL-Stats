@@ -2,13 +2,16 @@ import streamlit as st
 from data_loader import load_data
 
 st.set_page_config(
-    page_title="IPL Dashboard Analytics (2008-2025)",
+    page_title="IPL Analytics Dashboard (v2.1)",
     page_icon="🏏",
     layout="wide",
     initial_sidebar_state="expanded"
 )
 
-st.title("🏏 IPL Advanced Analytics Dashboard")
+st.title("🏏 IPL Advanced Analytics Dashboard (v2.1 - Accuracy Fixes)")
+if st.sidebar.button("Clear App Cache & Reload"):
+    st.cache_data.clear()
+    st.rerun()
 st.markdown("""
 Welcome to the Comprehensive IPL Analytics Dashboard! This application provides deep insights into the Indian Premier League matches from 2008 to the most recent season (2025 data included).
 
@@ -24,7 +27,7 @@ Welcome to the Comprehensive IPL Analytics Dashboard! This application provides 
 
 try:
     with st.spinner("Loading Data..."):
-        matches_df, deliveries_df = load_data()
+        matches_df, deliveries_df = load_data(v="2.1")
         
     st.success(f"Successfully loaded {len(matches_df)} matches and {len(deliveries_df)} deliveries!")
     

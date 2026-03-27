@@ -5,7 +5,7 @@ from pathlib import Path
 PROCESSED_DATA_DIR = Path(__file__).parent / "data"
 
 @st.cache_data
-def load_data():
+def load_data(v="2.1"):
     matches_df = pd.read_parquet(PROCESSED_DATA_DIR / 'matches.parquet')
     deliveries_df = pd.read_parquet(PROCESSED_DATA_DIR / 'deliveries.parquet')
     
