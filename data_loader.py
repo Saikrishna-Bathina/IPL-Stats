@@ -49,4 +49,22 @@ def load_data(v="2.1"):
     # Ensure date is datetime for accurate sorting
     matches_df['date'] = pd.to_datetime(matches_df['date'])
     
+    # --- DEBUT MATCH IDENTIFICATION ---
+    # Merge with date to find the absolute chronological first match for each player
+    temp_df = deliveries_df.merge(matches_df[['match_id', 'date']], on='match_id', how='left')
+    temp_df = temp_df.sort_values(by=['date', 'match_id'])
+    
+    # Find the first match for each batter
+    first_match_batter = temp_df.groupby('batter')['match_id'].first().to_dict()
+    # Find the first match for each bowler
+    first_match_bowler = temp_df.groupby('bowler')['match_id'].first().to_dict()
+    
+    # Mark debut matches in the main deliveries_df
+    deliveries_df['is_batter_debut'] = deliveries_df.apply(lambda x: x['match_id'] == first_match_batter.get(x['batter']), axis=1)
+    deliveries_df['is_bowler_debut'] = deliveries_df.apply(lambda x: x['match_id'] == first_match_bowler.get(x['bowler']), axis=1)
+    
+    # --- BOWLER WICKETS LOGIC ---
+    non_bowler_wickets = ['run out', 'retired hurt', 'obstructing the field', 'hit ball twice', 'timed out']
+    deliveries_df['is_bowler_wicket'] = ((deliveries_df['is_wicket'] == 1) & (~deliveries_df['dismissal_kind'].isin(non_bowler_wickets))).astype(int)
+    
     return matches_df, deliveries_df

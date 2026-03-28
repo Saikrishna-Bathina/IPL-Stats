@@ -158,23 +158,50 @@ runs_milestone = st.selectbox("Select Career Runs Milestone", [500, 1000, 1500, 
 
 @st.cache_data
 def get_career_milestones(df, target, matches_df):
-    # Merge with matches to get date for accurate sorting
+    # Ensure true chronological order by merging with match dates
     df = df.merge(matches_df[['match_id', 'date']], on='match_id', how='left')
+    # Use date, match_id, inning, over, and ball for precise career sequence
+    df = df.sort_values(by=['date', 'match_id', 'inning', 'over', 'ball'])
     
-    innings_stats = df.groupby(['match_id', 'date', 'batter', 'season']).agg(
-        runs=('batsman_runs', 'sum'),
-        balls=('is_batter_ball', 'sum')
-    ).reset_index()
+    # Calculate unique innings: a player has "played an innings" if they were at the crease 
+    # (either as a batter or as a non-striker) in a match.
+    at_crease = pd.concat([
+        df[['match_id', 'date', 'batter']].rename(columns={'batter': 'player'}),
+        df[['match_id', 'date', 'non_striker']].rename(columns={'non_striker': 'player'})
+    ]).drop_duplicates()
+    at_crease = at_crease.sort_values(by=['date', 'match_id'])
+    at_crease['innings_rank'] = at_crease.groupby('player').cumcount() + 1
     
-    # Use date for true chronological sorting
-    innings_stats = innings_stats.sort_values(by=['date', 'match_id'])
+    # Process milestones for each player
+    results = []
+    unique_batters = df['batter'].unique()
     
-    innings_stats['career_runs'] = innings_stats.groupby('batter')['runs'].cumsum()
-    innings_stats['career_balls'] = innings_stats.groupby('batter')['balls'].cumsum()
-    innings_stats['innings_played'] = innings_stats.groupby('batter').cumcount() + 1
-    
-    reached = innings_stats[innings_stats['career_runs'] >= target].groupby('batter').first().reset_index()
-    return reached[['batter', 'career_runs', 'career_balls', 'innings_played', 'season']]
+    for batter in unique_batters:
+        # Get only the balls faced by this batter
+        p_df = df[df['batter'] == batter].copy()
+        
+        # Merge the total innings rank back to the delivery data
+        # This link ensures we have the correct "career innings number" for each match
+        player_innings = at_crease[at_crease['player'] == batter][['match_id', 'innings_rank']]
+        p_df = p_df.merge(player_innings, on='match_id', how='left')
+        
+        # Calculate cumulative totals ball-by-ball
+        p_df['career_runs'] = p_df['batsman_runs'].cumsum()
+        p_df['career_balls'] = p_df['is_batter_ball'].cumsum()
+        
+        # Find the VERY FIRST ball where the player reaches the target runs
+        milestone = p_df[p_df['career_runs'] >= target].head(1)
+        
+        if not milestone.empty:
+            results.append({
+                'batter': batter,
+                'career_runs': milestone.iloc[0]['career_runs'],
+                'career_balls': milestone.iloc[0]['career_balls'],
+                'innings_played': milestone.iloc[0]['innings_rank'],
+                'season': milestone.iloc[0]['season']
+            })
+            
+    return pd.DataFrame(results)
 
 with st.spinner("Calculating Career Milestones..."):
     # Fix: If we want TRUE career milestones, we should calculate them on the full merged_df (excl. super overs)

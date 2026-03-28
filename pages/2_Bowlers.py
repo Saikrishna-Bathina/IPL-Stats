@@ -59,26 +59,44 @@ wicket_target = st.selectbox("Select Wickets Milestone", [50, 100, 150, 200, 250
 
 @st.cache_data
 def get_fastest_wickets(df, target, matches_df):
-    # Merge with matches for date
+    # Ensure true chronological order by merging with match dates
     df = df.merge(matches_df[['match_id', 'date']], on='match_id', how='left')
+    # Use date, match_id, inning, over, and ball for precise career sequence
+    df = df.sort_values(by=['date', 'match_id', 'inning', 'over', 'ball'])
     
     non_bowler_wickets = ['run out', 'retired hurt', 'obstructing the field', 'hit ball twice', 'timed out']
     df['is_bowler_wicket'] = ((df['is_wicket'] == 1) & (~df['dismissal_kind'].isin(non_bowler_wickets))).astype(int)
     
-    innings_stats = df.groupby(['match_id', 'date', 'bowler', 'season']).agg(
-        wickets=('is_bowler_wicket', 'sum'),
-        balls=('is_bowler_ball', 'sum')
-    ).reset_index()
+    # Process milestones for each bowler
+    results = []
+    unique_bowlers = df['bowler'].unique()
     
-    # Use date for true chronological sorting
-    innings_stats = innings_stats.sort_values(by=['date', 'match_id'])
-    
-    innings_stats['career_wickets'] = innings_stats.groupby('bowler')['wickets'].cumsum()
-    innings_stats['career_balls'] = innings_stats.groupby('bowler')['balls'].cumsum()
-    innings_stats['innings_played'] = innings_stats.groupby('bowler').cumcount() + 1
-    
-    reached = innings_stats[innings_stats['career_wickets'] >= target].groupby('bowler').first().reset_index()
-    return reached[['bowler', 'career_wickets', 'career_balls', 'innings_played', 'season']]
+    for bowler in unique_bowlers:
+        # Get only the balls bowled by this bowler
+        p_df = df[df['bowler'] == bowler].copy()
+        
+        # Calculate cumulative totals ball-by-ball
+        p_df['career_wickets'] = p_df['is_bowler_wicket'].cumsum()
+        p_df['career_balls'] = p_df['is_bowler_ball'].cumsum()
+        
+        # Calculate unique innings: a bowler has "played an innings" if they bowled at least one ball
+        # Since we are already filtering for p_df (balls bowled by this bowler), 
+        # we can just count unique match_ids.
+        p_df['innings_rank'] = p_df.groupby('bowler')['match_id'].transform(lambda x: pd.factorize(x)[0] + 1)
+        
+        # Find the VERY FIRST ball where the bowler reaches the target wickets
+        milestone = p_df[p_df['career_wickets'] >= target].head(1)
+        
+        if not milestone.empty:
+            results.append({
+                'bowler': bowler,
+                'career_wickets': milestone.iloc[0]['career_wickets'],
+                'career_balls': milestone.iloc[0]['career_balls'],
+                'innings_played': milestone.iloc[0]['innings_rank'],
+                'season': milestone.iloc[0]['season']
+            })
+            
+    return pd.DataFrame(results)
 
 with st.spinner("Calculating Wicket Milestones..."):
     if year != "All":
