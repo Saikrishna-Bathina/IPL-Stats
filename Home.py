@@ -2,13 +2,13 @@ import streamlit as st
 from data_loader import load_data
 
 st.set_page_config(
-    page_title="IPL Analytics Dashboard (v2.1)",
+    page_title="IPL Analytics Dashboard (v3.0)",
     page_icon="🏏",
     layout="wide",
     initial_sidebar_state="expanded"
 )
 
-st.title("🏏 IPL Advanced Analytics Dashboard (v2.1 - Accuracy Fixes)")
+st.title("🏏 IPL Advanced Analytics Dashboard (v3.0 - Accuracy & Debut Fixes)")
 if st.sidebar.button("Clear App Cache & Reload"):
     st.cache_data.clear()
     st.rerun()
@@ -27,7 +27,7 @@ Welcome to the Comprehensive IPL Analytics Dashboard! This application provides 
 
 try:
     with st.spinner("Loading Data..."):
-        matches_df, deliveries_df = load_data(v="2.1")
+        matches_df, deliveries_df = load_data(v="3.0")
         
     st.success(f"Successfully loaded {len(matches_df)} matches and {len(deliveries_df)} deliveries!")
     

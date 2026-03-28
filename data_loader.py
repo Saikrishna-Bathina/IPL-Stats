@@ -5,7 +5,7 @@ from pathlib import Path
 PROCESSED_DATA_DIR = Path(__file__).parent / "data"
 
 @st.cache_data
-def load_data(v="2.1"):
+def load_data(v="3.0"):
     matches_df = pd.read_parquet(PROCESSED_DATA_DIR / 'matches.parquet')
     deliveries_df = pd.read_parquet(PROCESSED_DATA_DIR / 'deliveries.parquet')
     
@@ -59,9 +59,9 @@ def load_data(v="2.1"):
     # Find the first match for each bowler
     first_match_bowler = temp_df.groupby('bowler')['match_id'].first().to_dict()
     
-    # Mark debut matches in the main deliveries_df
-    deliveries_df['is_batter_debut'] = deliveries_df.apply(lambda x: x['match_id'] == first_match_batter.get(x['batter']), axis=1)
-    deliveries_df['is_bowler_debut'] = deliveries_df.apply(lambda x: x['match_id'] == first_match_bowler.get(x['bowler']), axis=1)
+    # Mark debut matches in the main deliveries_df using vectorized mapping for performance
+    deliveries_df['is_batter_debut'] = deliveries_df['match_id'] == deliveries_df['batter'].map(first_match_batter)
+    deliveries_df['is_bowler_debut'] = deliveries_df['match_id'] == deliveries_df['bowler'].map(first_match_bowler)
     
     # --- BOWLER WICKETS LOGIC ---
     non_bowler_wickets = ['run out', 'retired hurt', 'obstructing the field', 'hit ball twice', 'timed out']

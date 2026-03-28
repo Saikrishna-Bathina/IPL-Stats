@@ -11,7 +11,7 @@ st.title("🏏 Batters Dashboard")
 
 @st.cache_data
 def load_all_data():
-    return load_data(v="2.1")
+    return load_data(v="3.0")
 
 try:
     matches_df, deliveries_df = load_all_data()
