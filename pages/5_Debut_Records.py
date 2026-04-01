@@ -45,8 +45,9 @@ debut_batting = get_debut_batting_stats(deliveries_df, matches_df)
 if debut_batting.empty:
     st.info("No debut batting data found.")
 else:
-    st.subheader("Highest Scores on IPL Debut")
-    st.dataframe(debut_batting.head(20).set_index('batter')[['runs', 'balls', 'batting_team', 'bowling_team', 'season', 'venue']], width='stretch')
+    st.subheader("Highest Scores on IPL Debut (50+)")
+    debut_batting_50 = debut_batting[debut_batting['runs'] >= 50]
+    st.dataframe(debut_batting_50.set_index('batter')[['runs', 'balls', 'batting_team', 'bowling_team', 'season', 'venue']], width='stretch')
 
 # --- 2. Debut Milestones (Fastest 50/100) ---
 st.markdown("---")
@@ -119,5 +120,6 @@ debut_bowling = get_debut_bowling_stats(deliveries_df, matches_df)
 if debut_bowling.empty:
     st.info("No debut bowling data found.")
 else:
-    st.subheader("Best Bowling Figures on IPL Debut")
-    st.dataframe(debut_bowling.head(20).set_index('bowler')[['figures', 'overs', 'bowling_team', 'batting_team', 'season', 'venue']], width='stretch')
+    st.subheader("Best Bowling Figures on IPL Debut (3+ Wickets)")
+    debut_bowling_3w = debut_bowling[debut_bowling['wickets'] >= 3]
+    st.dataframe(debut_bowling_3w.set_index('bowler')[['figures', 'overs', 'bowling_team', 'batting_team', 'season', 'venue']], width='stretch')
